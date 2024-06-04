@@ -1,51 +1,47 @@
-import axios, {AxiosError, AxiosInstance } from 'axios';
-import { retrieveToken } from './token';
+import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { StatusCodes } from 'http-status-codes';
-import { handleError } from './handle-error';
+import { toast } from 'react-toastify';
 
-interface ErrorResponse {
+type DetailMessageType = {
   type: string;
   message: string;
-}
+};
 
-const errorStatusMap: { [key: number]: boolean } = {
+const StatusCodeMapping: Record<number, boolean> = {
   [StatusCodes.BAD_REQUEST]: true,
   [StatusCodes.UNAUTHORIZED]: true,
   [StatusCodes.NOT_FOUND]: true,
 };
 
-const isErrorStatus = (status: number) => !!errorStatusMap[status];
+const shouldDisplayError = (response: AxiosResponse) =>
+  !!StatusCodeMapping[response.status];
 
-const API_URL = 'https://14.design.htmlacademy.pro/six-cities';
-const TIMEOUT = 5000;
+const BACKEND_URL = 'https://14.design.htmlacademy.pro/six-cities';
+const REQUEST_TIMEOUT = 5000;
 
-export const initializeAPI = (): AxiosInstance => {
-  const apiInstance = axios.create({
-    baseURL: API_URL,
-    timeout: TIMEOUT,
+export const createAPI = (): AxiosInstance => {
+  const api = axios.create({
+    baseURL: BACKEND_URL,
+    timeout: REQUEST_TIMEOUT,
   });
 
-  apiInstance.interceptors.request.use((config) => {
-    const token = retrieveToken();
-
-    if (token && config.headers) {
-      config.headers['X-Token'] = token;
-    }
-
-    return config;
-  });
-
-  apiInstance.interceptors.response.use(
+  api.interceptors.response.use(
     (response) => response,
-    (error: AxiosError<ErrorResponse>) => {
-      if (error.response && isErrorStatus(error.response.status)) {
-        const { message } = error.response.data;
-        handleError(message);
+    (error: AxiosError<DetailMessageType>) => {
+      if (error.response && shouldDisplayError(error.response)) {
+        const detailMessage = error.response.data;
+
+        toast.warn(detailMessage.message);
       }
 
-      return Promise.reject(error);
+      return Promise.reject(error); // возвращаем ошибку, чтобы она была обработана в thunk
     }
   );
 
-  return apiInstance;
+  const token = localStorage.getItem('six-cities-token');
+  if (token) {
+    api.defaults.headers.common['X-Token'] = token;
+  }
+
+  return api;
 };

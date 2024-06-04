@@ -1,10 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit';
-import { initializeAPI } from '../services/api';
-import { rootReducer } from './root-reducer';
+import rootReducer from './reducer';
+import { createAPI } from '../services/api';
+import { checkAuth } from './action';
 
-import redirectMiddleware from './redirect';
-
-export const api = initializeAPI();
+export const api = createAPI();
 
 export const store = configureStore({
   reducer: rootReducer,
@@ -13,5 +12,10 @@ export const store = configureStore({
       thunk: {
         extraArgument: api,
       },
-    }).concat(redirectMiddleware),
+    }),
 });
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+store.dispatch(checkAuth());

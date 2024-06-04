@@ -1,19 +1,23 @@
 import { Navigate } from 'react-router-dom';
-import { AuthorizationStatus, AppRoute } from '../../constants/constants';
+import { AppRoute, AuthorizationStatus } from '../../const';
+import { useSelector } from 'react-redux';
+import { selectAuthorizationStatus } from '../../store/selectors';
+import React from 'react';
 
 type PrivateRouteProps = {
-  authorizationStatus: AuthorizationStatus;
   children: JSX.Element;
-};
+}
 
-function PrivateRoute(props: PrivateRouteProps): JSX.Element {
-  const {authorizationStatus, children} = props;
+const PrivateRoute = React.memo(({ children }: PrivateRouteProps): JSX.Element => {
+  const authorizationStatus = useSelector(selectAuthorizationStatus);
 
   return (
     authorizationStatus === AuthorizationStatus.Auth
       ? children
-      : <Navigate to={AppRoute.Login}/>
+      : <Navigate to={AppRoute.Login} />
   );
-}
+});
+
+PrivateRoute.displayName = 'PrivateRoute';
 
 export default PrivateRoute;

@@ -1,71 +1,84 @@
-import { useRef, useEffect } from 'react';
-import { Icon, Marker, layerGroup } from 'leaflet';
-import { City } from '../../types/city';
-import { Points } from '../../types/points';
-import { URL_MARKER_DEFAULT, URL_MARKER_CURRENT } from '../../constants/constants.ts';
-import { MapClasses } from '../../constants/constants.ts';
-import { useAppSelector } from '../../hooks';
-import { getCurrentMarker } from '../../store/offers-slice/offers-slice-selectors.ts';
-
-import useMap from '../../hooks/use-map';
 import 'leaflet/dist/leaflet.css';
+import { Icon, Marker, layerGroup } from 'leaflet';
+import { City, Offers, Offer, WideOffer } from '../../types/types';
+import { URL_MARKER_CURRENT, URL_MARKER_DEFAULT, URL_MARKER_HOWERED } from '../../const';
+import { useRef, useEffect, useMemo } from 'react';
+import useMap from '../../hooks/use-map';
+import React from 'react';
 
-type MapProps = {
+type MapComponentProps = {
   city: City;
-  points: Points[];
-  isMainPage: boolean;
-  specialCaseId?: string;
+  points: Offers;
+  selectedPoint: WideOffer | undefined;
+  hoveredPoint: Offer | undefined;
 };
 
-const defaultIcon = new Icon({
-  iconUrl: URL_MARKER_DEFAULT,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40]
-});
-
-const currentIcon = new Icon({
-  iconUrl: URL_MARKER_CURRENT,
-  iconSize: [40, 40],
-  iconAnchor: [20, 40]
-});
-
-
-function Map({city, points, isMainPage, specialCaseId}: MapProps): JSX.Element {
+const MapComponent = React.memo(({ city, points, selectedPoint, hoveredPoint }: MapComponentProps): JSX.Element => {
   const mapRef = useRef(null);
   const map = useMap(mapRef, city);
 
-  const selectedMarker = useAppSelector(getCurrentMarker);
+  const defaultCustomIcon = useMemo(() => new Icon({
+    iconUrl: URL_MARKER_DEFAULT,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+  }), []);
+
+  const currentCustomIcon = useMemo(() => new Icon({
+    iconUrl: URL_MARKER_CURRENT,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+  }), []);
+
+  const hoveredCustomIcon = useMemo(() => new Icon({
+    iconUrl: URL_MARKER_HOWERED,
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+  }), []);
 
   useEffect(() => {
     if (map) {
-      map.flyTo([city.location.latitude, city.location.longitude], city.location.zoom);
+      if (selectedPoint) {
+        map.setView([selectedPoint.location.latitude, selectedPoint.location.longitude], selectedPoint.location.zoom);
+      } else {
+        map.setView([city.location.latitude, city.location.longitude], city.location.zoom);
+      }
     }
-  }, [map, city]);
+  }, [map, city, selectedPoint]);
 
   useEffect(() => {
     if (map) {
-      const markers = layerGroup().addTo(map);
+      const markerLayer = layerGroup().addTo(map);
 
       points.forEach((point) => {
-        const marker = new Marker([point.location.latitude, point.location.longitude]);
-        const isSelected = specialCaseId
-          ? point.id === specialCaseId
-          : selectedMarker !== null && point.id === selectedMarker.id;
+        const marker = new Marker({
+          lat: point.location.latitude,
+          lng: point.location.longitude
+        });
 
-        marker.setIcon(isSelected ? currentIcon : defaultIcon).addTo(markers);
+        let icon = defaultCustomIcon;
+        if (hoveredPoint !== undefined && point.id === hoveredPoint.id) {
+          icon = hoveredCustomIcon;
+        }
+        marker.setIcon(icon).addTo(markerLayer);
       });
 
+      if (selectedPoint) {
+        const selectedMarker = new Marker({
+          lat: selectedPoint.location.latitude,
+          lng: selectedPoint.location.longitude
+        });
+        selectedMarker.setIcon(currentCustomIcon).addTo(markerLayer);
+      }
+
       return () => {
-        map.removeLayer(markers);
+        map.removeLayer(markerLayer);
       };
     }
-  }, [map, points, selectedMarker, specialCaseId]);
+  }, [map, points, selectedPoint, hoveredPoint, defaultCustomIcon, currentCustomIcon, hoveredCustomIcon]);
 
+  return <div style={{ height: '100%' }} ref={mapRef}></div>;
+});
 
-  const mapClassName = isMainPage ? MapClasses.SectionPropertyMapClass : MapClasses.SectionMainMapClass;
+MapComponent.displayName = 'MapComponent';
 
-
-  return <div className={mapClassName} style={{ height: '100%' }} ref={mapRef}></div>;
-}
-
-export default Map;
+export default MapComponent;

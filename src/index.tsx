@@ -1,24 +1,19 @@
-import { Provider } from 'react-redux';
-import { store } from './store';
-import { checkAuth, fetchOffers } from './store/api-actions.ts';
-
-import ErrorMessage from './components/error-message/error-message';
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './components/app/app';
+import { store } from './store';
+import { fetchOffers } from './store/action';
+import { Provider } from 'react-redux';
 
-store.dispatch(fetchOffers());
-store.dispatch(checkAuth());
+(async () => {
+  await store.dispatch(fetchOffers());
+})();
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 
 root.render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <ErrorMessage />
-      <App />
-    </Provider>
-  </React.StrictMode>
+  <Provider store={store}>
+    <App />
+  </Provider>
 );
